@@ -12,11 +12,10 @@
 	<?php
 		ini_set('max_execution_time', 180);
 		ini_set('memory_limit', '-1');
+		error_reporting(0);
 		date_default_timezone_set('asia/ho_chi_minh');
 		if (!isset($_SESSION)) session_start();
 		include "connectdb.php";
-
-		
 
 		class WavFile{
 			private static $HEADER_LENGTH = 44;
@@ -116,6 +115,9 @@
 			}
 		}
 
+		$qr = $conn->prepare("select siteinfo.companyname as companyname, siteinfo.slogan as slogan, siteinfo.seokeywords as seokeywords, siteinfo.seodescription as seodescription, siteinfo.facebook as facebook, multimedia.url as logo, siteinfo.copyright as copyright, siteinfo.copyright_ln2 as copyright_ln2 from siteinfo, multimedia where siteinfo.logo = multimedia.id limit 1;");
+		$qr->execute();
+		$rs_siteinfo = $qr->fetch();
 
 		if (isset($_SESSION['user'])){
 			$qr = $conn->prepare("select permission from user where id = '" . $_SESSION['user'] .  "';");
@@ -182,12 +184,15 @@
 			$rs_myplaylist = $qr->fetchAll();
 		}
 
-		$qr = $conn->prepare("select id, song, url, singer from multimedia where type = 'music' and owner = 'administrator';");
+		$qr = $conn->prepare("select id, song, singer from multimedia where type = 'music' and owner = 'administrator';");
 		$qr->execute();
 		$rs_allsongs = $qr->fetchAll();
 	?>
 	<head>
-		<title>Muzik</title>
+		<title><?php echo ($rs_siteinfo['companyname']) . " | " . ($rs_siteinfo['slogan']); ?></title>
+		<link href="<?php echo ($rs_siteinfo['logo']); ?>" type="image/png" rel="shortcut icon" />
+		<meta name="keywords" content="<?php echo ($rs_siteinfo['seokeywords']); ?>" />
+		<meta name="description" content="<?php echo ($rs_siteinfo['seodescription']); ?>" />
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
@@ -204,15 +209,15 @@
 		<section class="navbar">
 		    <div class="container">
 				<div class="navbar-header">
-					<a class="navbar-brand navbar-brand-image" href="/" <title>Muzik</title></a></a>
+					<a class="navbar-brand navbar-brand-image" href="/" title="<?php echo ($rs_siteinfo['companyname']); ?>"><?php echo ($rs_siteinfo['companyname']); ?></a>
 				</div>
 				<?php
 					if (isset($_SESSION['user'])){
-						echo "<a id=\"goto-login\" href=\"logout.php\" title=\"Sign out\"> Logout </a>";
-						echo "<p id=\"username\">" . $_SESSION['user'];
+						echo "<a id=\"goto-login\" href=\"logout.php\" title=\"Sign out\"><img src=\"picture/goto-login.png\"/></a>";
+						echo "<p id=\"username\">Good day, " . $_SESSION['user'] . "!</p>";
 					}
 					else{ 
-						echo "<a id=\"goto-login\" href=\"login.php\" title=\"Sign in\"> Login </a>";
+						echo "<a id=\"goto-login\" href=\"login.php\" title=\"Sign in\"><img src=\"picture/goto-login.png\"/></a>";
 					}
 				?>
 		    </div>
@@ -223,12 +228,12 @@
 		      	<ul class="nav mainbar-list wow fadeInDown" data-wow-duration="0.5s">
 		        	<li id="buy-more-song" class="active">
 		          		<a class="highlight" href="#buymoresong" title="Buy more songs">
-		            		<i class="fa fa-shopping-cart"></i> Buy
+		            		<i class="fa fa-shopping-cart"></i> Buy more songs
 		          		</a>
 		       		</li>
 		       		<li id="get-signature">
 		          		<a href="#getsignature" title="Get signature">
-		            		<i class="fa fa-certificate"></i> Sign
+		            		<i class="fa fa-certificate"></i> Get signature
 		          		</a>
 		       		</li>
 		       		<?php
@@ -250,7 +255,7 @@
 			<table class="songstable">
 				<thead>
 					<tr>
-						<th class="col-xs-1">Play</th>
+						<th class="col-xs-1">#</th>
 						<th class="col-xs-5">Song</th>
 						<th class="col-xs-4">Singer</th>
 						<th class="col-xs-2">Status/Action</th>
@@ -261,22 +266,7 @@
 						$i = 1;
 						foreach ($rs_allsongs as $key => $value) {
 							echo "<tr class=\"" . ($i % 2 ? "odd" : "even") . "\">
-									<td class=\"col-xs-1\">"; 
-									if (isset($_SESSION['user'])){
-										$qr = $conn->prepare("select id from multimedia where type = 'music' and owner = '" . $_SESSION['user'] .  "' and parentid = '" . $value['id'] . "' limit 1;");
-										$qr->execute();
-										$rs_isLicenced = $qr->fetch();
-										if ($rs_isLicenced['id'] == ""){
-											echo "unavailable";
-										}
-										else{
-											echo "<a href=\"" . $value['url'] . "\">Play</a>";
-										}
-									}
-									else{
-										echo "unavailable";
-									}
-									echo "	</td>
+									<td class=\"col-xs-1\">" . $i . "</td>
 									<td class=\"col-xs-5\">" . $value['song'] . "</td>
 									<td class=\"col-xs-4\">" . $value['singer'] . "</td>
 									<td class=\"col-xs-2\">";
@@ -325,8 +315,92 @@
 			</form>
 		</div>
 		
-		
-	  
+		<div class="sm2-bar-ui full-width fixed">
+ 			<div class="bd sm2-main-controls">
+				<div class="sm2-inline-texture"></div>
+				<div class="sm2-inline-gradient"></div>
+  				<div class="sm2-inline-element sm2-button-element">
+					<div class="sm2-button-bd">
+						<a href="#play" class="sm2-inline-button sm2-icon-play-pause">Play / pause</a>
+					</div>
+  				</div>
+  				<div class="sm2-inline-element sm2-inline-status">
+					<div class="sm2-playlist">
+						<div class="sm2-playlist-target">
+							<noscript><p>JavaScript is required.</p></noscript>
+						</div>
+					</div>
+					<div class="sm2-progress">
+						<div class="sm2-row">
+							<div class="sm2-inline-time">0:00</div>
+							<div class="sm2-progress-bd">
+								<div class="sm2-progress-track">
+									<div class="sm2-progress-bar"></div>
+									<div class="sm2-progress-ball"><div class="icon-overlay"></div></div>
+								</div>
+							</div>
+							<div class="sm2-inline-duration">0:00</div>
+						</div>
+					</div>
+				</div>
+				<div class="sm2-inline-element sm2-button-element sm2-volume">
+					<div class="sm2-button-bd">
+						<span class="sm2-inline-button sm2-volume-control volume-shade"></span>
+						<a href="#volume" class="sm2-inline-button sm2-volume-control">volume</a>
+					</div>
+				</div>
+				<div class="sm2-inline-element sm2-button-element">
+					<div class="sm2-button-bd">
+						<a href="#prev" title="Previous" class="sm2-inline-button sm2-icon-previous">&lt; previous</a>
+					</div>
+				</div>
+				<div class="sm2-inline-element sm2-button-element">
+					<div class="sm2-button-bd">
+						<a href="#next" title="Next" class="sm2-inline-button sm2-icon-next">&gt; next</a>
+					</div>
+				</div>
+
+				<div class="sm2-inline-element sm2-button-element">
+					<div class="sm2-button-bd">
+						<a href="#repeat" title="Repeat playlist" class="sm2-inline-button sm2-icon-repeat">&infin; repeat</a>
+					</div>
+				</div>
+				<div class="sm2-inline-element sm2-button-element sm2-menu">
+					<div class="sm2-button-bd">
+						<a href="#menu" class="sm2-inline-button sm2-icon-menu">menu</a>
+					</div>
+				</div>
+			</div>
+			<div class="bd sm2-playlist-drawer sm2-element">
+				<div class="sm2-inline-texture">
+					<div class="sm2-box-shadow"></div>
+				</div>
+  				<div class="sm2-playlist-wrapper">
+	    			<ul class="sm2-playlist-bd">
+	    				<?php
+	    					if (isset($_SESSION['user'])){
+		    					foreach ($rs_myplaylist as $key => $value){
+					 				echo "<li>
+											<div class=\"sm2-row\">
+												<div class=\"sm2-col sm2-wide\">
+													<a href=\"http://docs.google.com/uc?export=open&id=" . $value['id'] . "&type=.wav\"><b>" . $value['singer'] . "</b> - " . $value['song'] . "<span class=\"label\">Licenced</span></a>
+												</div>
+												<div class=\"sm2-col\">
+													<a href=\"http://docs.google.com/uc?export=open&id=" . $value['id'] . "\" target=\"_blank\" title=\"Download this song\" class=\"sm2-icon sm2-music sm2-exclude\">Download this song</a>
+												</div>
+											</div>
+										</li>";
+				 				}
+			 				}
+						?>
+    				</ul>
+  				</div>
+ 			</div>
+		</div>
+
+	  	<div class="social-bar">
+		    <a target="_blank" href="<?php echo ($rs_siteinfo['facebook']); ?>" title="Visit my Facebook" class="social-bar-facebook"><i class="fa fa-facebook"></i></a>
+	  	</div>
 	</body>
 	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
